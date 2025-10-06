@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Simulación de Evacuación del Titanic</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      background: linear-gradient(135deg, #a7c0ff, #e2ebff);
+      margin: 0;
+      padding: 30px;
+    }
+    h1 {
+      text-align: center;
+      color: #1b2a4e;
+      margin-bottom: 25px;
+    }
+    .contenedor {
+      max-width: 800px;
+      margin: 0 auto;
+      background: #fff;
+      padding: 25px;
+      border-radius: 15px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    }
+    form {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 15px;
+      margin-bottom: 20px;
+    }
+    input, select, button {
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      font-size: 14px;
+    }
+    button {
+      background-color: #1b2a4e;
+      color: white;
+      border: none;
+      transition: 0.3s;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #324b94;
+    }
+    #listaPasajeros {
+      margin-bottom: 20px;
+      background: #f7f9ff;
+      border-radius: 10px;
+      padding: 15px;
+    }
+    .tarjeta {
+      background: #f1f4ff;
+      padding: 8px 12px;
+      border-radius: 8px;
+      margin: 5px 0;
+      font-size: 14px;
+      border-left: 4px solid #324b94;
+    }
+    #resultado {
+      background: #eef3ff;
+      padding: 15px;
+      border-radius: 10px;
+      white-space: pre-wrap;
+      font-family: monospace;
+      border: 1px solid #cfd6ee;
+    }
+  </style>
+</head>
+<body>
+  <h1>Simulación de Evacuación del Titanic</h1>
+  <div class="contenedor">
+    <form id="formPasajero">
+      <input type="text" id="nombre" placeholder="Nombre" required>
+      <input type="number" id="edad" placeholder="Edad" required>
+      <select id="genero" required>
+        <option value="">Género</option>
+        <option value="Femenino">Femenino</option>
+        <option value="Masculino">Masculino</option>
+      </select>
+      <select id="boleto" required>
+        <option value="">Tipo de boleto</option>
+        <option value="1ra Clase">1ra Clase</option>
+        <option value="2da Clase">2da Clase</option>
+        <option value="3ra Clase">3ra Clase</option>
+      </select>
+      <button type="submit">Agregar pasajero</button>
+    </form>
+
+    <div id="listaPasajeros">
+      <strong>Pasajeros agregados:</strong>
+    </div>
+
+    <button onclick="iniciarSimulacion()">Ejecutar simulación</button>
+
+    <h3>Resultado:</h3>
+    <pre id="resultado"></pre>
+  </div>
+
+  <script>
+    class Pasajero {
+      constructor(nombre, edad, genero, tipoBoleto) {
+        this.nombre = nombre;
+        this.edad = edad;
+        this.genero = genero;
+        this.tipoBoleto = tipoBoleto;
+      }
+      mostrarInfo() {
+        return `${this.nombre}, ${this.edad} años, ${this.genero}, ${this.tipoBoleto}`;
+      }
+    }
+
+    class BoteRescate {
+      constructor(capacidad) {
+        this.capacidad = capacidad;
+        this.ocupantes = [];
+      }
+      agregarPasajero(pasajero) {
+        if (this.ocupantes.length < this.capacidad) {
+          this.ocupantes.push(pasajero);
+        }
+      }
+      mostrarOcupantes() {
+        let texto = `Bote (${this.ocupantes.length}/${this.capacidad}):\n`;
+        this.ocupantes.forEach(p => texto += " - " + p.mostrarInfo() + "\n");
+        return texto;
+      }
+    }
+
+    const pasajeros = [];
+
+    document.getElementById("formPasajero").addEventListener("submit", e => {
+      e.preventDefault();
+      const nombre = document.getElementById("nombre").value;
+      const edad = parseInt(document.getElementById("edad").value);
+      const genero = document.getElementById("genero").value;
+      const boleto = document.getElementById("boleto").value;
+
+      pasajeros.push(new Pasajero(nombre, edad, genero, boleto));
+
+      actualizarLista();
+      e.target.reset();
+    });
+
+    function actualizarLista() {
+      const contenedor = document.getElementById("listaPasajeros");
+      contenedor.innerHTML = "<strong>Pasajeros agregados:</strong>";
+      pasajeros.forEach(p => {
+        const div = document.createElement("div");
+        div.className = "tarjeta";
+        div.textContent = p.mostrarInfo();
+        contenedor.appendChild(div);
+      });
+    }
+
+    function evacuarPasajeros(pasajeros, botes) {
+      pasajeros.sort((a, b) => {
+        if (a.genero !== b.genero) return a.genero === "Femenino" ? -1 : 1;
+        if (a.edad < 12 && b.edad >= 12) return -1;
+        if (a.edad >= 12 && b.edad < 12) return 1;
+        const prioridad = { "1ra Clase": 1, "2da Clase": 2, "3ra Clase": 3 };
+        return prioridad[a.tipoBoleto] - prioridad[b.tipoBoleto];
+      });
+
+      const fuera = [];
+      pasajeros.forEach(p => {
+        const bote = botes.find(b => b.ocupantes.length < b.capacidad);
+        if (bote) bote.agregarPasajero(p);
+        else fuera.push(p);
+      });
+
+      let salida = "";
+      botes.forEach(b => salida += b.mostrarOcupantes() + "\n");
+      if (fuera.length) {
+        salida += "Pasajeros que quedaron fuera:\n";
+        fuera.forEach(p => salida += " - " + p.mostrarInfo() + "\n");
+      } else {
+        salida += "Todos los pasajeros fueron evacuados.\n";
+      }
+
+      return salida;
+    }
+
+    function iniciarSimulacion() {
+      if (pasajeros.length === 0) {
+        alert("Agrega al menos un pasajero antes de comenzar.");
+        return;
+      }
+
+      const botes = [new BoteRescate(4), new BoteRescate(3)];
+      const resultado = evacuarPasajeros(pasajeros, botes);
+      document.getElementById("resultado").textContent = resultado;
+    }
+  </script>
+</body>
+</html>
